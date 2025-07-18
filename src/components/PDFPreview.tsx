@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, Download, Calendar, Hash, ExternalLink } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -11,12 +10,12 @@ interface PDFPreviewProps {
   onClose: () => void;
 }
 
-export const PDFPreview: React.FC<PDFPreviewProps> = ({ document, onClose }) => {
+export const PDFPreview: React.FC<PDFPreviewProps> = ({ document: pdfDocument, onClose }) => {
   const downloadDocument = () => {
-    const url = URL.createObjectURL(document.file);
+    const url = URL.createObjectURL(pdfDocument.file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = document.name;
+    a.download = pdfDocument.name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -24,7 +23,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({ document, onClose }) => 
   };
 
   const openInNewTab = () => {
-    const url = URL.createObjectURL(document.file);
+    const url = URL.createObjectURL(pdfDocument.file);
     window.open(url, '_blank');
   };
 
@@ -42,7 +41,7 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({ document, onClose }) => 
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold truncate pr-4">
-              {document.name}
+              {pdfDocument.name}
             </DialogTitle>
             <div className="flex items-center space-x-2">
               <Button
@@ -74,15 +73,15 @@ export const PDFPreview: React.FC<PDFPreviewProps> = ({ document, onClose }) => 
           <div className="flex items-center space-x-4 text-sm text-gray-600 mt-2">
             <div className="flex items-center">
               <Calendar className="h-4 w-4 mr-1" />
-              {document.uploadDate.toLocaleDateString()}
+              {pdfDocument.uploadDate.toLocaleDateString()}
             </div>
             <div className="flex items-center">
               <Hash className="h-4 w-4 mr-1" />
-              {formatFileSize(document.size)}
+              {formatFileSize(pdfDocument.size)}
             </div>
-            {document.tags.length > 0 && (
+            {pdfDocument.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {document.tags.map(tag => (
+                {pdfDocument.tags.map(tag => (
                   <Badge key={tag} variant="outline" className="text-xs">
                     {tag}
                   </Badge>

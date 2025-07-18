@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { FileText, Eye, Download, Calendar, Hash, Check } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,11 +37,11 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
     }
   };
 
-  const downloadDocument = (document: PDFDocument) => {
-    const url = URL.createObjectURL(document.file);
+  const downloadDocument = (pdfDocument: PDFDocument) => {
+    const url = URL.createObjectURL(pdfDocument.file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = document.name;
+    a.download = pdfDocument.name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -85,12 +84,12 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
 
       {/* PDF Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {documents.map(document => {
-          const isSelected = selectedDocuments.includes(document.id);
+        {documents.map(pdfDocument => {
+          const isSelected = selectedDocuments.includes(pdfDocument.id);
           
           return (
             <Card 
-              key={document.id} 
+              key={pdfDocument.id} 
               className={`group transition-all duration-200 hover:shadow-lg hover:-translate-y-1 ${
                 isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''
               }`}
@@ -100,7 +99,7 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
                 <div className="flex items-start justify-between mb-3">
                   <Checkbox
                     checked={isSelected}
-                    onCheckedChange={(checked) => handleSelectDocument(document.id, checked as boolean)}
+                    onCheckedChange={(checked) => handleSelectDocument(pdfDocument.id, checked as boolean)}
                     className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
                   <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-100' : 'bg-gray-100'}`}>
@@ -111,31 +110,31 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
                 {/* Document Info */}
                 <div className="space-y-2 mb-4">
                   <h3 className="font-medium text-sm text-gray-900 line-clamp-2 leading-tight">
-                    {document.name}
+                    {pdfDocument.name}
                   </h3>
                   
                   <div className="flex items-center text-xs text-gray-500 space-x-3">
                     <div className="flex items-center">
                       <Calendar className="h-3 w-3 mr-1" />
-                      {document.uploadDate.toLocaleDateString()}
+                      {pdfDocument.uploadDate.toLocaleDateString()}
                     </div>
                     <div className="flex items-center">
                       <Hash className="h-3 w-3 mr-1" />
-                      {formatFileSize(document.size)}
+                      {formatFileSize(pdfDocument.size)}
                     </div>
                   </div>
 
                   {/* Tags */}
-                  {document.tags.length > 0 && (
+                  {pdfDocument.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {document.tags.slice(0, 2).map(tag => (
+                      {pdfDocument.tags.slice(0, 2).map(tag => (
                         <Badge key={tag} variant="outline" className="text-xs px-1 py-0">
                           {tag}
                         </Badge>
                       ))}
-                      {document.tags.length > 2 && (
+                      {pdfDocument.tags.length > 2 && (
                         <Badge variant="outline" className="text-xs px-1 py-0">
-                          +{document.tags.length - 2}
+                          +{pdfDocument.tags.length - 2}
                         </Badge>
                       )}
                     </div>
@@ -147,7 +146,7 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onPreview(document)}
+                    onClick={() => onPreview(pdfDocument)}
                     className="flex-1 text-xs"
                   >
                     <Eye className="h-3 w-3 mr-1" />
@@ -156,7 +155,7 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => downloadDocument(document)}
+                    onClick={() => downloadDocument(pdfDocument)}
                     className="flex-1 text-xs"
                   >
                     <Download className="h-3 w-3 mr-1" />
