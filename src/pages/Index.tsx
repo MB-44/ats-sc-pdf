@@ -40,15 +40,15 @@ const Index = () => {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [previewDocument, setPreviewDocument] = useState<PDFDocument | null>(null);
 
-  const handleFilesUpload = useCallback((files: File[]) => {
-    const newDocuments: PDFDocument[] = files.map(file => ({
+  const handleFilesUpload = useCallback((filesWithContent: { file: File; content: string }[]) => {
+    const newDocuments: PDFDocument[] = filesWithContent.map(({ file, content }) => ({
       id: Math.random().toString(36).substr(2, 9),
       name: file.name,
       file,
       uploadDate: new Date(),
       size: file.size,
       tags: [],
-      content: '', // In a real app, you'd extract text from PDF
+      content: content,
     }));
 
     setDocuments(prev => [...prev, ...newDocuments]);
@@ -56,7 +56,7 @@ const Index = () => {
     
     toast({
       title: "Success",
-      description: `${files.length} PDF${files.length > 1 ? 's' : ''} uploaded successfully`,
+      description: `${filesWithContent.length} PDF${filesWithContent.length > 1 ? 's' : ''} uploaded and processed successfully`,
     });
   }, [toast]);
 
@@ -258,6 +258,11 @@ const Index = () => {
 
               <div className="text-sm text-gray-600">
                 Showing {filteredDocuments.length} of {documents.length} PDF{documents.length !== 1 ? 's' : ''}
+                {documents.some(doc => doc.content) && (
+                  <span className="ml-2 text-green-600">
+                    • Content searchable
+                  </span>
+                )}
               </div>
             </div>
 

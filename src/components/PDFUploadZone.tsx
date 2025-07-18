@@ -3,72 +3,111 @@ import React, { useCallback, useState } from 'react';
 import { Upload, FileText, Plus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set up PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface PDFUploadZoneProps {
-  onFilesUpload: (files: File[]) => void;
+  onFilesUpload: (filesWithContent: { file: File; content: string }[]) => void;
   isCompact?: boolean;
 }
 
 export const PDFUploadZone: React.FC<PDFUploadZoneProps> = ({ onFilesUpload, isCompact = false }) => {
   const { toast } = useToast();
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const validateFiles = (files: File[]) => {
-    const validFiles = files.filter(file => file.type === 'application/pdf');
-    const invalidCount = files.length - validFiles.length;
-    
-    if (invalidCount > 0) {
-      toast({
-        title: "Some files skipped",
-        description: `${invalidCount} non-PDF file${invalidCount > 1 ? 's' : ''} were skipped. Only PDF files are allowed.`,
-        variant: "destructive",
-      });
-    }
-    
-    return validFiles;
-  };
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    setIsUploading(true);
-
-    const files = Array.from(e.dataTransfer.files);
-    const validFiles = validateFiles(files);
-    
-    if (validFiles.length > 0) {
-      onFilesUpload(validFiles);
-    }
-    
-    setIsUploading(false);
-  }, [onFilesUpload, toast]);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setIsUploading(true);
-      const files = Array.from(e.target.files);
-      const validFiles = validateFiles(files);
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
       
-      if (validFiles.length > 0) {
-        onFilesUpload(validFiles);
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + ' ';
       }
       
-      // Reset input value to allow selecting the same files again
-      e.target.value = '';
-      setIsUploading(false);
+      return fullText.trim();
+    } catch (error) {
+      console.error('Error extracting text from PDF:', error);
+      return '';
     }
-  }, [onFilesUpload, toast]);
+  };
+
+  const processFiles = async (files: File[]) => {
+    setIsProcessing(true);
+    
+    try {
+      const filesWithContent = await Promise.all(
+        files.map(async (file) => {
+          const content = await extractTextFromPDF(file);
+          return { file, content };
+        })
+      );
+      
+      onFilesUpload(filesWithContent);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process some PDF files",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      
+      const files = Array.from(e.dataTransfer.files).filter(
+        file => file.type === 'application/pdf'
+      );
+      
+      if (files.length === 0) {
+        toast({
+          title: "Invalid files",
+          description: "Please upload only PDF files",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      processFiles(files);
+    },
+    [onFilesUpload, toast]
+  );
+
+  const handleFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []).filter(
+        file => file.type === 'application/pdf'
+      );
+      
+      if (files.length === 0) {
+        toast({
+          title: "Invalid files",
+          description: "Please upload only PDF files",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      processFiles(files);
+      
+      // Reset input
+      e.target.value = '';
+    },
+    [onFilesUpload, toast]
+  );
 
   if (isCompact) {
     return (
@@ -79,11 +118,11 @@ export const PDFUploadZone: React.FC<PDFUploadZoneProps> = ({ onFilesUpload, isC
           accept=".pdf"
           onChange={handleFileSelect}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isUploading}
+          disabled={isProcessing}
         />
-        <Button variant="outline" disabled={isUploading}>
+        <Button variant="outline" disabled={isProcessing}>
           <Plus className="h-4 w-4 mr-2" />
-          Add PDFs
+          {isProcessing ? 'Processing...' : 'Add More'}
         </Button>
       </div>
     );
@@ -91,57 +130,61 @@ export const PDFUploadZone: React.FC<PDFUploadZoneProps> = ({ onFilesUpload, isC
 
   return (
     <div
-      className={`
-        relative border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200
-        ${isDragOver 
-          ? 'border-blue-400 bg-blue-50 scale-[1.02]' 
-          : 'border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
-        }
-        ${isUploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}
-      `}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+        isDragOver 
+          ? 'border-blue-500 bg-blue-50' 
+          : 'border-gray-300 hover:border-gray-400'
+      } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
       onDrop={handleDrop}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+      }}
+      onDragLeave={() => setIsDragOver(false)}
     >
-      <input
-        type="file"
-        multiple
-        accept=".pdf"
-        onChange={handleFileSelect}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        disabled={isUploading}
-      />
-      
-      <div className="space-y-4">
-        <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-          isDragOver ? 'bg-blue-100' : 'bg-gray-100'
-        }`}>
-          {isUploading ? (
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          ) : (
-            <Upload className={`h-8 w-8 ${isDragOver ? 'text-blue-600' : 'text-gray-400'}`} />
-          )}
-        </div>
+      <div className="relative">
+        <input
+          type="file"
+          multiple
+          accept=".pdf"
+          onChange={handleFileSelect}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          disabled={isProcessing}
+        />
         
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            {isDragOver ? 'Drop your PDFs here' : 'Upload PDF Documents'}
-          </h3>
-          <p className="text-gray-500 mb-4">
-            Drag and drop your PDF files here, or click to browse
-          </p>
-          <div className="flex items-center justify-center space-x-2 text-sm text-gray-400">
-            <FileText className="h-4 w-4" />
-            <span>Supports multiple PDF files</span>
+        <div className="space-y-4">
+          <div className="flex justify-center">
+            <div className="p-4 bg-blue-100 rounded-full">
+              {isProcessing ? (
+                <div className="animate-spin h-8 w-8 border-2 border-blue-600 border-t-transparent rounded-full" />
+              ) : (
+                <Upload className="h-8 w-8 text-blue-600" />
+              )}
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {isProcessing ? 'Processing PDFs...' : 'Upload PDF Documents'}
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {isProcessing 
+                ? 'Extracting text content from PDFs for searchability'
+                : 'Drag and drop your PDF files here, or click to browse'
+              }
+            </p>
+            
+            {!isProcessing && (
+              <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center">
+                  <FileText className="h-4 w-4 mr-1" />
+                  PDF files only
+                </div>
+                <div>Multiple files supported</div>
+              </div>
+            )}
           </div>
         </div>
-        
-        {!isUploading && (
-          <Button className="mt-4 bg-blue-600 hover:bg-blue-700">
-            <Upload className="h-4 w-4 mr-2" />
-            Choose Files
-          </Button>
-        )}
       </div>
     </div>
   );
