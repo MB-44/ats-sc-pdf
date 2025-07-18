@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Upload, Search, Download, Filter, Plus, X, FileText, Calendar, Tag, Hash } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -59,6 +58,34 @@ const Index = () => {
       description: `${filesWithContent.length} PDF${filesWithContent.length > 1 ? 's' : ''} uploaded and processed successfully`,
     });
   }, [toast]);
+
+  const handleRemoveDocuments = useCallback((documentIds: string[]) => {
+    setDocuments(prev => prev.filter(doc => !documentIds.includes(doc.id)));
+    setFilteredDocuments(prev => prev.filter(doc => !documentIds.includes(doc.id)));
+    setSelectedDocuments(prev => prev.filter(id => !documentIds.includes(id)));
+    
+    toast({
+      title: "Removed",
+      description: `${documentIds.length} PDF${documentIds.length > 1 ? 's' : ''} removed successfully`,
+    });
+  }, [toast]);
+
+  const handleBulkRemove = () => {
+    const documentsToRemove = selectedDocuments.length > 0 
+      ? selectedDocuments
+      : filteredDocuments.map(doc => doc.id);
+
+    if (documentsToRemove.length === 0) {
+      toast({
+        title: "No documents selected",
+        description: "Please select documents to remove or ensure your filters return results",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    handleRemoveDocuments(documentsToRemove);
+  };
 
   const applyFilters = useCallback(() => {
     let filtered = [...documents];
@@ -214,6 +241,14 @@ const Index = () => {
                     <Download className="h-4 w-4 mr-2" />
                     Download {selectedDocuments.length > 0 ? 'Selected' : 'Filtered'}
                   </Button>
+                  <Button
+                    onClick={handleBulkRemove}
+                    disabled={filteredDocuments.length === 0}
+                    variant="destructive"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Remove {selectedDocuments.length > 0 ? 'Selected' : 'Filtered'}
+                  </Button>
                   {documents.length > 0 && (
                     <PDFUploadZone onFilesUpload={handleFilesUpload} isCompact />
                   )}
@@ -272,6 +307,7 @@ const Index = () => {
               selectedDocuments={selectedDocuments}
               setSelectedDocuments={setSelectedDocuments}
               onPreview={setPreviewDocument}
+              onRemove={handleRemoveDocuments}
               formatFileSize={formatFileSize}
             />
           </div>

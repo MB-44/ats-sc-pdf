@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { FileText, Eye, Download, Calendar, Hash, Check } from 'lucide-react';
+import { FileText, Eye, Download, Calendar, Hash, Check, Trash2 } from 'lucide-react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +12,7 @@ interface PDFGridProps {
   selectedDocuments: string[];
   setSelectedDocuments: React.Dispatch<React.SetStateAction<string[]>>;
   onPreview: (document: PDFDocument) => void;
+  onRemove: (documentIds: string[]) => void;
   formatFileSize: (bytes: number) => string;
 }
 
@@ -19,6 +21,7 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
   selectedDocuments,
   setSelectedDocuments,
   onPreview,
+  onRemove,
   formatFileSize
 }) => {
   const handleSelectDocument = (documentId: string, checked: boolean) => {
@@ -46,6 +49,10 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const removeDocument = (pdfDocument: PDFDocument) => {
+    onRemove([pdfDocument.id]);
   };
 
   if (documents.length === 0) {
@@ -95,15 +102,25 @@ export const PDFGrid: React.FC<PDFGridProps> = ({
               }`}
             >
               <CardContent className="p-4">
-                {/* Header with checkbox */}
+                {/* Header with checkbox and remove button */}
                 <div className="flex items-start justify-between mb-3">
                   <Checkbox
                     checked={isSelected}
                     onCheckedChange={(checked) => handleSelectDocument(pdfDocument.id, checked as boolean)}
                     className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                   />
-                  <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                    <FileText className={`h-6 w-6 ${isSelected ? 'text-blue-600' : 'text-gray-600'}`} />
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeDocument(pdfDocument)}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <div className={`p-2 rounded-lg ${isSelected ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                      <FileText className={`h-6 w-6 ${isSelected ? 'text-blue-600' : 'text-gray-600'}`} />
+                    </div>
                   </div>
                 </div>
 
